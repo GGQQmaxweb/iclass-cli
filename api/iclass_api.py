@@ -104,6 +104,16 @@ class TronClassAPI:
         else:
             return {"Submission failed", response.status_code, response.text}
 
+    async def get_my_files(self,numberOfRequest,page):
+        url = "https://iclass.tku.edu.tw/api/user/resources?conditions={%22keyword%22:%22%22,%22includeSlides%22:false,%22limitTypes%22:[%22file%22,%22video%22,%22document%22,%22image%22,%22audio%22,%22scorm%22,%22evercam%22,%22swf%22,%22wmpkg%22,%22link%22],%22fileType%22:%22all%22,%22parentId%22:0,%22sourceType%22:%22MyResourcesFile%22,%22no-intercept%22:true}&page="+str(page)+"&page_size="+str(numberOfRequest)
+        try:
+            self.session.get(url)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            return {"error": f"Error fetching courses: {str(e)}"}
+
+
     async def upload_file(self,file_path:str):
         try:
             file_name = os.path.basename(file_path)
