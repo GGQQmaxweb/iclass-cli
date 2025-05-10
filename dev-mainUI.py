@@ -25,9 +25,10 @@ async def curses_main(stdscr):
     curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
     stdscr.addstr(0, 0, "🔐 Logging in...", curses.A_BOLD)
     stdscr.refresh()
-    #auth = Authenticator()
-    #session = auth.perform_auth()
-    #api = TronClassAPI(session)
+    #handle api
+    auth = Authenticator()
+    session = auth.perform_auth()
+    api = TronClassAPI(session)
     
     selected_idx = 0
     menu_options = ["To Do List","My Class","My Files"]
@@ -43,15 +44,53 @@ async def curses_main(stdscr):
             if selected_idx == len(menu_options):
                 break
             if(selected_idx==0):
-                await getMyToDoList(api)
+                await getMyToDoList(stdscr,api)
                 pass
             elif(selected_idx==1):
-                await mycurses(api)
+                await mycurses(stdscr,api)
                 pass
             elif(selected_idx==2):
+
                 pass
 
     pass
+async def mycurses(stdscr,api):
+    result = await api.get_courses()
+    courses = result.get("courses", [])
+    course_options = [f"{c['id']} - {c['name']}" for c in courses]
+
+    selected_idx = 0
+    while True:
+        draw_menu(stdscr, selected_idx, course_options + ["Exit"], "🎓 Select a Course")
+        key = stdscr.getch()
+        if key == curses.KEY_UP and selected_idx > 0:
+            selected_idx -= 1
+        elif key == curses.KEY_DOWN and selected_idx < len(course_options):
+            selected_idx += 1
+        elif key in [curses.KEY_ENTER, ord('\n')]:
+            if selected_idx == len(course_options):
+                break
+            selected_course = courses[selected_idx]
+            await handle_course_actions(stdscr, api, selected_course["id"])
+
+async def handle_course_actions(stdscr, api, course_id):
+    result = await api.get_activities(course_id)
+    mystr = result["activities"]
+    activities = []
+    selected = 0
+
+    while True:
+        draw_menu(stdscr, selected, activities, f"Course ID: {course_id} - Actions")
+        key = stdscr.getch()
+        if key == curses.KEY_UP and selected > 0:
+            selected -= 1
+        elif key == curses.KEY_DOWN and selected < len(activities) - 1:
+            selected += 1
+        elif key in [curses.KEY_ENTER, ord("\n")]:
+            action = activities[selected]
+            
+            if action == "Back":
+                break
 
 if __name__ == '__main__':
     curses.wrapper(lambda stdscr: asyncio.run(curses_main(stdscr)))
