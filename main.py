@@ -148,7 +148,15 @@ async def main():
                 print(result)
             except ValueError:
                 print("❌ Invalid input. Please enter numbers only.")
-
+        elif choice == "file":
+            try:
+                print("My files")
+                page = input("page")
+                numOf = input("numOf")
+                result = await api.get_my_files(numOf,page)
+                print(result)
+            except ValueError:
+                print("❌ Invalid input. Please enter numbers only.")
         elif choice == "dla":
             downloadIdList = []
             try:
