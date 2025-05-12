@@ -41,8 +41,7 @@ class TronClassAPI:
         except requests.exceptions.RequestException as e:
             return {"error": f"Error fetching bulletins: {str(e)}"}
 
-    async def download(self, reference_id):
-        url = f"https://iclass.tku.edu.tw/api/uploads/reference/{reference_id}/blob"
+    async def fileDownloader(self,url):
         response = self.session.get(url, stream=True)
 
         # Get filename from Content-Disposition (RFC 5987 format)
@@ -63,6 +62,16 @@ class TronClassAPI:
                 if chunk:
                     f.write(chunk)
         return str(file_path)
+
+    async def download(self, reference_id):
+        url = f"https://iclass.tku.edu.tw/api/uploads/reference/{reference_id}/blob"
+        file_path = await self.fileDownloader(url)
+        return file_path
+    
+    async def myfiledownload(self, file_id):
+        url = f"https://iclass.tku.edu.tw/api/uploads/{file_id}/blob"
+        file_path = await self.fileDownloader(url)
+        return file_path
 
     async def get_courses(self):
         url = 'https://iclass.tku.edu.tw/api/my-courses?conditions={"status":["ongoing"]}'
@@ -121,7 +130,7 @@ class TronClassAPI:
     async def get_my_files(self,numberOfRequest,page):
         url = "https://iclass.tku.edu.tw/api/user/resources?conditions={%22keyword%22:%22%22,%22includeSlides%22:false,%22limitTypes%22:[%22file%22,%22video%22,%22document%22,%22image%22,%22audio%22,%22scorm%22,%22evercam%22,%22swf%22,%22wmpkg%22,%22link%22],%22fileType%22:%22all%22,%22parentId%22:0,%22sourceType%22:%22MyResourcesFile%22,%22no-intercept%22:true}&page="+str(page)+"&page_size="+str(numberOfRequest)
         try:
-            self.session.get(url)
+            response = self.session.get(url)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
