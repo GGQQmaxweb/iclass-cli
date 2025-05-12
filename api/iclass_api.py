@@ -5,6 +5,7 @@ import urllib.parse
 import re
 from datetime import date
 from dateutil.relativedelta import relativedelta
+from pathlib import Path
 
 class TronClassAPI:
     def __init__(self, session):
@@ -40,7 +41,7 @@ class TronClassAPI:
         except requests.exceptions.RequestException as e:
             return {"error": f"Error fetching bulletins: {str(e)}"}
 
-    async def download(self,reference_id):
+    async def download(self, reference_id):
         url = f"https://iclass.tku.edu.tw/api/uploads/reference/{reference_id}/blob"
         response = self.session.get(url, stream=True)
 
@@ -52,12 +53,16 @@ class TronClassAPI:
             encoded_filename = cd.split("filename*=UTF-8''")[-1]
             filename = urllib.parse.unquote(encoded_filename)
 
-        # Save file
-        with open(filename, 'wb') as f:
+        downloads_dir = Path.home() / 'Downloads'
+        os.makedirs(downloads_dir, exist_ok=True)  # Create if it doesn't exist
+
+        file_path = downloads_dir / filename
+
+        with open(file_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 if chunk:
                     f.write(chunk)
-        return filename
+        return str(file_path)
 
     async def get_courses(self):
         url = 'https://iclass.tku.edu.tw/api/my-courses?conditions={"status":["ongoing"]}'
@@ -70,6 +75,15 @@ class TronClassAPI:
     
     async def get_activities(self,course_id):
         url = f'https://iclass.tku.edu.tw/api/courses/{course_id}/activities?sub_course_id=0'
+        try:
+            response = self.session.get(url)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            return {"error": f"Error fetching courses: {str(e)}"}
+
+    async def get_activitie(self,activities_id):
+        url = f'https://iclass.tku.edu.tw/api/activities/{activities_id}?sub_course_id=0'
         try:
             response = self.session.get(url)
             response.raise_for_status()
