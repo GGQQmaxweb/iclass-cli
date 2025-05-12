@@ -52,7 +52,7 @@ async def curses_main(stdscr):
                 await mycurses(stdscr,api)
                 pass
             elif(selected_idx==2):
-
+                await get_my_files_ui(stdscr, api)
                 pass
 
     pass
@@ -265,6 +265,96 @@ async def handle_course_actions(stdscr, api, course_id):
             if activity_id is None:
                 break
             await show_task_detail(stdscr, api, activity_id)
+
+async def get_my_files_ui(stdscr, api):
+    curses.curs_set(0)
+    curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
+
+    page = 1
+    selected = 0
+    cached_pages = {}
+
+    while True:
+        stdscr.clear()
+        stdscr.addstr(1, 2, f"📁 My Files - Page {page}", curses.A_BOLD)
+
+        if page not in cached_pages:
+            try:
+                response = await api.get_my_files(5, page)
+                cached_pages[page] = response
+            except Exception as e:
+                stdscr.addstr(3, 2, f"❌ Failed to fetch files: {e}")
+                stdscr.refresh()
+                stdscr.getch()
+                return
+
+        response = cached_pages[page]
+        uploads = response.get("uploads", [])
+        max_pages = response.get("pages", 1)
+
+        entries = []
+        file_ids = []  # map entries to file reference IDs
+
+        for upload in uploads:
+            name = upload.get("name", "Unnamed")
+            file_id = upload.get("reference_id", upload.get("id", "N/A"))  # use reference_id if available
+            size_kb = upload.get("size", 0) // 1024
+            date = upload.get("created_at", "N/A")
+            entries.append(f"📄 {name} ({file_id}) - {size_kb} KB - {date}")
+            file_ids.append(file_id)
+
+        # Add navigation
+        entries.append("➡️ Next Page" if page < max_pages else "🔙 Back")
+        entries.append("🔙 Back" if page < max_pages else "")
+
+        h, w = stdscr.getmaxyx()
+        top = max(0, selected - (h - 5) // 2)
+        visible = entries[top:top + h - 4]
+
+        for idx, entry in enumerate(visible):
+            y = 3 + idx
+            if top + idx == selected:
+                stdscr.attron(curses.color_pair(1))
+                stdscr.addstr(y, 2, entry[:w - 4])
+                stdscr.attroff(curses.color_pair(1))
+            else:
+                stdscr.addstr(y, 2, entry[:w - 4])
+
+        stdscr.refresh()
+        key = stdscr.getch()
+
+        if key == curses.KEY_UP and selected > 0:
+            selected -= 1
+        elif key == curses.KEY_DOWN and selected < len(entries) - 1:
+            selected += 1
+        elif key in [curses.KEY_ENTER, ord("\n")]:
+            if selected == len(entries) - 2:
+                if page < max_pages:
+                    page += 1
+                    selected = 0
+                else:
+                    break
+            elif selected == len(entries) - 1:
+                if page > 1:
+                    page -= 1
+                    selected = 0
+                else:
+                    break
+            else:
+                # Download selected file
+                file_ref = file_ids[selected]
+                try:
+                    filepath = await api.download(file_ref)
+                    stdscr.clear()
+                    stdscr.addstr(3, 2, f"✅ Downloaded to: {filepath}")
+                except Exception as e:
+                    stdscr.clear()
+                    stdscr.addstr(3, 2, f"❌ Download failed: {e}")
+                stdscr.addstr(5, 2, "Press any key to continue...")
+                stdscr.refresh()
+                stdscr.getch()
+        elif key == ord('q'):
+            break
 
 if __name__ == '__main__':
     curses.wrapper(lambda stdscr: asyncio.run(curses_main(stdscr)))
