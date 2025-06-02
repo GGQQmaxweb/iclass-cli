@@ -149,15 +149,17 @@ async def main():
                 print(result)
             except ValueError:
                 print("❌ Invalid input. Please enter numbers only.")
+                
         elif choice == "file":
             try:
                 print("My files")
                 page = input("page")
                 numOf = input("numOf")
                 result = await api.get_my_files(numOf,page)
-                print(result)
+                print(str(result))
             except ValueError:
                 print("❌ Invalid input. Please enter numbers only.")
+                
         elif choice == "dla":
             downloadIdList = []
             try:
@@ -183,6 +185,7 @@ async def main():
                 await classApi.displayStuClass()
             except:
                 print("Do you enter genkey?")
+                
         elif choice == "8" or "exit":
             print("👋 Exiting...")
             break
