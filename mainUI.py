@@ -5,6 +5,7 @@ from api.auth_module import Authenticator
 from api.iclass_api import TronClassAPI
 from bs4 import BeautifulSoup
 from datetime import datetime
+import os
 
 def draw_menu(stdscr, selected_idx, options, title):
     stdscr.clear()
@@ -33,7 +34,7 @@ async def curses_main(stdscr):
     api = TronClassAPI(session)
     
     selected_idx = 0
-    menu_options = ["To Do List","My Class","My Files"]
+    menu_options = ["To Do List","My Class","My Files","File Upload"]
     while True:
         draw_menu(stdscr, selected_idx, menu_options + ["Exit"], "Select a Option")
         
@@ -54,7 +55,9 @@ async def curses_main(stdscr):
             elif(selected_idx==2):
                 await get_my_files_ui(stdscr, api)
                 pass
-
+            elif(selected_idx==3):
+                await upload_file_page(stdscr, api)
+                pass
     pass
 
 async def getMyToDoList(stdscr, api):
@@ -188,6 +191,40 @@ async def show_task_detail(stdscr, api, activity_id):
             except Exception as e:
                 status = f"❌ Download failed: {e}"
 
+async def upload_file_page(stdscr, api):
+    curses.curs_set(1)
+    stdscr.clear()
+    h, w = stdscr.getmaxyx()
+    input_path = ""
+    msg = "Enter file path to upload and press Enter:"
+    result = ""
+
+    while True:
+        stdscr.clear()
+        stdscr.addstr(1, w // 2 - len("📤 File Upload") // 2, "📤 File Upload", curses.A_BOLD | curses.A_UNDERLINE)
+        stdscr.addstr(3, 2, msg)
+        stdscr.addstr(5, 4, input_path)
+        if result:
+            stdscr.addstr(7, 2, result, curses.A_BOLD)
+        stdscr.refresh()
+
+        key = stdscr.getch()
+
+        if key in (curses.KEY_ENTER, ord("\n")):
+            if os.path.isfile(str(input_path)):
+                try:
+                    uploaded_path = await api.upload_file(input_path)
+                    result = f"✅ Uploaded: {uploaded_path}"
+                except Exception as e:
+                    result = f"❌ Upload failed: {str(e)}"
+            else:
+                result = "❌ Invalid file path."
+        elif key == 27:  # ESC to go back
+            break
+        elif key in (curses.KEY_BACKSPACE, 127):
+            input_path = input_path[:-1]
+        elif 32 <= key <= 126:
+            input_path += chr(key)
 
 async def mycurses(stdscr,api):
     result = await api.get_courses()
@@ -297,7 +334,7 @@ async def get_my_files_ui(stdscr, api):
 
         for upload in uploads:
             name = upload.get("name", "Unnamed")
-            file_id = upload.get("reference_id", upload.get("id", "N/A"))  # use reference_id if available
+            file_id = upload.get("id", "N/A")  # use reference_id if available
             size_kb = upload.get("size", 0) // 1024
             date = upload.get("created_at", "N/A")
             entries.append(f"📄 {name} ({file_id}) - {size_kb} KB - {date}")
