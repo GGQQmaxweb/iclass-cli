@@ -3,6 +3,7 @@ import os
 import requests
 import re
 from dotenv import load_dotenv
+requests.packages.urllib3.disable_warnings()
 
 class Authenticator:
     def __init__(self):
@@ -12,6 +13,7 @@ class Authenticator:
         if not self.username or not self.password:
             raise ValueError("請在 .env 檔案中設定 USERNAMEID 與 PASSWORD 環境變數。")
         self.session = requests.Session()
+        self.session.verify = False
         self.session.headers.update({'Referer': 'https://iclass.tku.edu.tw/'})
         self.auth_url = (
             "https://sso.tku.edu.tw/auth/realms/TKU/protocol/openid-connect/auth"
